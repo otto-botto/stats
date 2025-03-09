@@ -1,8 +1,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <math.h>
+#include <errno.h>
 #include "stats.h"
+
+#define STATS_FILE_PATH "/home/lora/Microservices/stats.txt"
+#define FILE_PATH_BUFFER_SIZE 256
 
 int test_gtest(){
     return 5;
@@ -59,29 +62,49 @@ char* parse(char* body) {
     return result;
 }
 
-void write_stats(char* result) {
+int write_stats(char* result) {
     FILE* fileptr;
-    char filepath[100];
+    char filepath[FILE_PATH_BUFFER_SIZE];
     // specify full path
     sprintf(filepath, "/home/lora/Microservices/stats.txt");
     // open file for writing
-    fileptr = fopen(filepath, "w");
+    fileptr = fopen(STATS_FILE_PATH, "w");
     if(fileptr == NULL) {
-        fprintf(stderr, "Failed to write to file.");
-        exit(EXIT_FAILURE);
+        fprintf(stderr, "Failed to open file '%s': %s\n", STATS_FILE_PATH, strerror(errno));
+        return -1; // Indicate failure
     }
 
-    // write to the file
-    fprintf(fileptr, result);
+    // Check for null result pointer
+    if (result == NULL) {
+        fprintf(stderr, "Error: result pointer is NULL.\n");
+        fclose(fileptr);
+        return -1;
+    }
 
-    // close the file
-    fclose(fileptr);
+    // Write to the file
+    if (fprintf(fileptr, "%s\n", result) < 0) { // added newline, check fprintf return value
+        fprintf(stderr, "Failed to write to file '%s': %s\n", STATS_FILE_PATH, strerror(errno));
+        fclose(fileptr);
+        return -1;
+    }
+
+    // Close the file
+    if (fclose(fileptr) != 0) {
+        fprintf(stderr, "Failed to close file '%s': %s\n", STATS_FILE_PATH, strerror(errno));
+        return -1;
+    }
+    // success
+    return 0;
 }
 
-void stats(Server server, Request request) {
+void stats(Request request) {
     char* message = parse(request.content);
     printf("%s\n", message);
-    write_stats(message);
+    if(write_stats(message) == 0) {
+        printf("Successfully wrote to file.\n");
+    }else {
+        printf("Failed to write to file.\n");
+    }
     // respond(&server, &request, 200, message);
     free(message);
 }

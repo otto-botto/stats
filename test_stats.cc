@@ -16,8 +16,8 @@ TEST(StatsTest, TestBuildStr) {
 }
 
 TEST(StatsTest, TestWriteStats) {
-    int num_books = 4;
-    double size = 20345.0/125000;
+    int num_books = 2;
+    double size = 12500.0/125000;
     char* message = build_str(num_books, size);
     write_stats(message);
 }
